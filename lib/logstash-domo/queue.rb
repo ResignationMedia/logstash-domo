@@ -4,7 +4,7 @@ require "securerandom"
 require "json"
 require "thread"
 
-module Domo
+module LogstashDomo
   module Queue
     # Interface for queue part numbers
     class PartNumber
@@ -32,7 +32,7 @@ module Domo
       attr_reader :timestamp
       # @return [Array<String>] CSV strings for all the event data in this job.
       attr_accessor :data
-      # @return [Domo::Queue::RedisDataPart] The Data Part to associate on upload.
+      # @return [LogstashDomo::Queue::RedisDataPart] The Data Part to associate on upload.
       attr_accessor :data_part
       # @return [Integer] The minimum number of data rows before the Job will be uploaded.
       attr_accessor :minimum_size
@@ -69,7 +69,7 @@ module Domo
       end
 
       # @param data [Array<String>]
-      # @param data_part [Domo::Queue::RedisDataPart, nil] The DataPart to associate with this Job.
+      # @param data_part [LogstashDomo::Queue::RedisDataPart, nil] The DataPart to associate with this Job.
       # @param id [String, nil] A unique ID for the job. Do not set this yourself. It will be auto generated, or set from the JSON serialized instance in redis.
       # @param timestamp [Object] An object that can be parsed into a Time object representing the timestamp when the job was created. Set to now (UTC) if not provided.
       def initialize(data, minimum_size=0, data_part=nil, id=nil, timestamp=nil)

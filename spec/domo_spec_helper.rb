@@ -177,7 +177,7 @@ module DomoHelper
 
   # Convert CSV strings embedded in a QueueJob into a Hash
   #
-  # @param job [Domo::Queue::Job] The job.
+  # @param job [LogstashDomo::Queue::Job] The job.
   # @param upload_timestamp [String, nil] The name of the upload_timestamp column, if applicable.
   # @param partition_field [String, nil] The name of the partition_field column, if applicable.
   # @return [Hash] A hash representation of the job's data.
@@ -247,7 +247,7 @@ module DomoHelper
 
         return CSV.parse(data, {:headers => true}).map(&:to_h)
       rescue Java::ComDomoSdkRequest::RequestException => e
-        raw_code = Domo::Client.request_error_status_code(e)
+        raw_code = LogstashDomo::Client.request_error_status_code(e)
         status_code = e.getStatusCode
         if status_code < 400 or status_code == 404 or status_code == 406 or status_code >= 500
           if attempts > 3

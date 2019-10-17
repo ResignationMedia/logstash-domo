@@ -1,9 +1,9 @@
 # encoding: utf-8
 require "redis"
 require "json"
-require "domo/queue"
+require "logstash-domo/queue"
 
-module Domo
+module LogstashDomo
   module Queue
     # Suffixes to add to our redis keys
     KEY_SUFFIXES = {

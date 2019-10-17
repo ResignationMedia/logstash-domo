@@ -32,8 +32,8 @@ namespace :domo do
     $LOAD_PATH.unshift(File.join(File.dirname(__dir__), "lib"))
     require "redis"
     require "yaml"
-    require "domo/client"
-    require "domo/queue/redis"
+    require "logstash-domo/client"
+    require "logstash-domo/queue/redis"
 
     args.with_defaults(:queue_settings => './testing/rspec_settings.yaml', :quiet => false)
 
@@ -45,11 +45,11 @@ namespace :domo do
       redis_client = init_redis_client
 
       domo_settings = settings['domo']
-      domo_client = Domo::Client.new(domo_settings['client_id'],
-                                     domo_settings['client_secret'],
-                                     domo_settings.fetch('api_host', 'api.domo.com'),
-                                     true,
-                                     Java::ComDomoSdkRequest::Scope::DATA)
+      domo_client = LogstashDomo::Client.new(domo_settings['client_id'],
+                                             domo_settings['client_secret'],
+                                             domo_settings.fetch('api_host', 'api.domo.com'),
+                                             true,
+                                             Java::ComDomoSdkRequest::Scope::DATA)
     rescue KeyError => e
       puts "#{e} was not found in the settings file #{args.queue_settings}"
       exit(1)
@@ -80,11 +80,11 @@ namespace :domo do
       raise e
     end
 
-    old_queue = Domo::Queue::Redis::JobQueue.active_queue(redis_client, args.old_dataset_id, old_stream.getId, 'main')
+    old_queue = LogstashDomo::Queue::Redis::JobQueue.active_queue(redis_client, args.old_dataset_id, old_stream.getId, 'main')
     old_queue.processing_status = :open
     old_queue.commit_status = :open
 
-    new_queue = Domo::Queue::Redis::JobQueue.active_queue(redis_client, args.new_dataset_id, new_stream.getId, 'main')
+    new_queue = LogstashDomo::Queue::Redis::JobQueue.active_queue(redis_client, args.new_dataset_id, new_stream.getId, 'main')
     new_queue.processing_status = :open
     new_queue.commit_status = :open
 
@@ -100,7 +100,7 @@ namespace :domo do
         break if merged_data.length == 0
 
       end
-      new_queue << Domo::Queue::Job.new(merged_data, 0) unless merged_data.length <= 0
+      new_queue << LogstashDomo::Queue::Job.new(merged_data, 0) unless merged_data.length <= 0
 
       job = old_queue.pop
 

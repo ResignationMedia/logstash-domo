@@ -1,8 +1,8 @@
 # encoding: utf-8
 require "java"
 require "logstash/devutils/rspec/spec_helper"
-require "domo/queue"
-require "domo/queue/redis"
+require "logstash-domo/queue"
+require "logstash-domo/queue/redis"
 require "logstash/event"
 require "core_extensions/flatten"
 require "rake"
@@ -121,7 +121,7 @@ describe "rake tasks", rake: true do
         csv_obj << data.values
       end
       csv_data = [csv_data.strip]
-      Domo::Queue::Job.new(csv_data)
+      LogstashDomo::Queue::Job.new(csv_data)
     end
   end
 
@@ -139,8 +139,8 @@ describe "rake tasks", rake: true do
 
   context "when the task is domo:migrate_queue" do
     let(:task_name) { "domo:migrate_queue" }
-    let!(:old_queue) { Domo::Queue::Redis::JobQueue.active_queue(redis_client, old_dataset['dataset_id'], old_dataset['stream_id'], 'main') }
-    let!(:new_queue) { Domo::Queue::Redis::JobQueue.active_queue(redis_client, new_dataset['dataset_id'], new_dataset['stream_id'], 'main') }
+    let!(:old_queue) { LogstashDomo::Queue::Redis::JobQueue.active_queue(redis_client, old_dataset['dataset_id'], old_dataset['stream_id'], 'main') }
+    let!(:new_queue) { LogstashDomo::Queue::Redis::JobQueue.active_queue(redis_client, new_dataset['dataset_id'], new_dataset['stream_id'], 'main') }
     let!(:task_args) { [old_dataset["dataset_id"], old_dataset["stream_id"], new_dataset["dataset_id"], new_dataset["stream_id"], true] }
 
     before(:each) do

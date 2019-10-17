@@ -1,7 +1,7 @@
 require 'json'
 require 'nokogiri'
 
-module Domo
+module LogstashDomo
   # Interacts with the DOMO APIs.
   class Client
     # @return [Java::ComDomoSdk::DomoClient]

@@ -1,9 +1,9 @@
 # encoding: utf-8
 require "concurrent/hash"
 require "thread"
-require "domo/queue"
+require "logstash-domo/queue"
 
-module Domo
+module LogstashDomo
   module Queue
     # Provides full public API compatibility with Redlock::Client
     # using Mutexes for locking instead of redis instances.
