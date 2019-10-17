@@ -1,0 +1,4 @@
+require 'logstash-domo'
+
+path = File.dirname(File.expand_path(__dir__))
+Dir.glob("#{path}/rakelib/**/*.rake").each { |f| import f }

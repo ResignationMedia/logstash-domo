@@ -1,0 +1,59 @@
+version: '3.4'
+services:
+  test:
+    build:
+      context: .
+      target: test
+    volumes:
+      - .:/logstash-domo
+    working_dir: /logstash-domo
+    command: bundle exec rspec --backtrace
+    environment:
+      - LOCK_HOST_1=redis://redis1:6379
+      - LOCK_HOST_2=redis://redis2:6379
+      - REDIS_URL=redis://mymaster
+      - REDIS_SENTINEL_HOST_1=sentinel1
+      - REDIS_SENTINEL_HOST_2=sentinel2
+      - REDIS_SENTINEL_HOST_3=sentinel3
+      - DEFAULT_REDIS_HOST=redis1
+      - DEFAULT_REDIS_PORT=6379
+    depends_on:
+      - redis1
+      - redis2
+      - sentinel1
+      - sentinel2
+      - sentinel3
+  redis1:
+    build:
+      context: .
+      target: redis1
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+  redis2:
+    build:
+      context: .
+      target: redis2
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    depends_on:
+      - redis1
+  sentinel1:
+    build:
+      context: .
+      target: sentinel1
+    command: [ "redis-server", "/usr/local/etc/redis/redis-sentinel.conf", "--sentinel"]
+    depends_on:
+      - redis1
+      - redis2
+  sentinel2:
+    build:
+      context: .
+      target: sentinel2
+    command: [ "redis-server", "/usr/local/etc/redis/redis-sentinel.conf", "--sentinel"]
+    depends_on:
+      - sentinel1
+  sentinel3:
+    build:
+      context: .
+      target: sentinel3
+    command: [ "redis-server", "/usr/local/etc/redis/redis-sentinel.conf", "--sentinel"]
+    depends_on:
+      - sentinel2
