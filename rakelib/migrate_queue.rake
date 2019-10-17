@@ -3,19 +3,23 @@ require "logstash-domo_jars.rb"
 
 java_import "com.domo.sdk.streams.model.Stream"
 
-def init_redis_client
-  redis_client = { :url => ENV["REDIS_URL"] }
-  redis_client[:sentinels] = ENV.select { |k, v| k.start_with? "REDIS_SENTINEL_HOST" }.map do |k, v|
-    index = k.split("_")[-1].to_i
-    port = ENV.fetch("REDIS_SENTINEL_PORT_#{index}", 26379)
+def init_redis_client(settings=nil)
+  if settings.nil?
+    redis_client = { :url => ENV["REDIS_URL"] }
+    redis_client[:sentinels] = ENV.select { |k, v| k.start_with? "REDIS_SENTINEL_HOST" }.map do |k, v|
+      index = k.split("_")[-1].to_i
+      port = ENV.fetch("REDIS_SENTINEL_PORT_#{index}", 26379)
 
-    {
-      :host => v,
-      :port => port
-    }
+      {
+        :host => v,
+        :port => port
+      }
+    end
+
+    redis_client = redis_client.reject { |k, _| k == :sentinels } if redis_client[:sentinels].length <= 0
+  else
+    redis_client = settings['redis'].inject({}) {|memo, (k, v)| memo[k.to_sym] = v; memo}
   end
-
-  redis_client = redis_client.reject { |k, _| k == :sentinels } if redis_client[:sentinels].length <= 0
 
   Redis.new(redis_client)
 end
@@ -42,7 +46,10 @@ namespace :domo do
       settings = YAML.safe_load(File.read(config_file))
       validate_settings!(settings, args)
 
-      redis_client = init_redis_client
+      # If this is set to nil, then the settings will be read from the the system environment
+      # Otherwise it will be read from the settings.yaml file
+      redis_settings = settings.fetch('redis', nil).nil? ? nil : settings
+      redis_client = init_redis_client(redis_settings)
 
       domo_settings = settings['domo']
       domo_client = LogstashDomo::Client.new(domo_settings['client_id'],
@@ -50,6 +57,23 @@ namespace :domo do
                                              domo_settings.fetch('api_host', 'api.domo.com'),
                                              true,
                                              Java::ComDomoSdkRequest::Scope::DATA)
+
+      old_dataset = {
+          :dataset_id => args.old_dataset_id,
+          :stream_id  => Integer(args.old_stream_id)
+      }
+      new_dataset = {
+          :dataset_id => args.new_dataset_id,
+          :stream_id  => Integer(args.new_stream_id)
+      }
+      # Somebody please explain to me why Rubocop thinks this is best practice styling. #EverybodyJustUsePythonPlease
+      args.quiet = if !!args.quiet
+                     args.quiet
+                   elsif args.quiet == 'true'
+                     true
+                   else
+                     false
+                   end
     rescue KeyError => e
       puts "#{e} was not found in the settings file #{args.queue_settings}"
       exit(1)
@@ -59,32 +83,32 @@ namespace :domo do
     end
 
     begin
-      _ = domo_client.dataset(args.old_dataset_id)
+      _ = domo_client.dataset(old_dataset[:dataset_id])
     rescue Java::ComDomoSdkRequest::RequestException => e
-      puts "Error loading Dataset ID #{args.old_dataset_id}"
+      puts "Error loading Dataset ID #{old_dataset[:dataset_id]}"
       raise e
     end
     begin
-      _ = domo_client.dataset(args.new_dataset_id)
+      _ = domo_client.dataset(new_dataset[:dataset_id])
     rescue Java::ComDomoSdkRequest::RequestException => e
-      puts "Error loading Dataset ID #{args.new_dataset_id}"
+      puts "Error loading Dataset ID #{new_dataset[:dataset_id]}"
       raise e
     end
 
     begin
-      old_stream = domo_client.stream(args.old_stream_id, args.old_dataset_id, false )
-      new_stream = domo_client.stream(args.new_stream_id, args.new_dataset_id, false )
+      old_stream = domo_client.stream(old_dataset[:stream_id], old_dataset[:dataset_id], false )
+      new_stream = domo_client.stream(new_dataset[:stream_id], new_dataset[:dataset_id], false )
     rescue Java::ComDomoSdkRequest::RequestException => e
       puts "Error locating Streams!"
       puts e
       raise e
     end
 
-    old_queue = LogstashDomo::Queue::Redis::JobQueue.active_queue(redis_client, args.old_dataset_id, old_stream.getId, 'main')
+    old_queue = LogstashDomo::Queue::Redis::JobQueue.active_queue(redis_client, old_dataset[:dataset_id], old_stream.getId, 'main')
     old_queue.processing_status = :open
     old_queue.commit_status = :open
 
-    new_queue = LogstashDomo::Queue::Redis::JobQueue.active_queue(redis_client, args.new_dataset_id, new_stream.getId, 'main')
+    new_queue = LogstashDomo::Queue::Redis::JobQueue.active_queue(redis_client, new_dataset[:dataset_id], new_stream.getId, 'main')
     new_queue.processing_status = :open
     new_queue.commit_status = :open
 
@@ -113,8 +137,8 @@ namespace :domo do
     end
 
     unless args.quiet
-      puts "Successfully migrated #{num_old_jobs} jobs from #{args.old_dataset_id} to #{args.new_dataset_id}"
-      puts "Successfully migrated #{old_pending_data} rows from the pending queue to #{args.new_dataset_id}"
+      puts "Successfully migrated #{num_old_jobs} jobs from #{old_dataset[:dataset_id]} to #{new_dataset[:dataset_id]}"
+      puts "Successfully migrated #{old_pending_data} rows from the pending queue to #{new_dataset[:dataset_id]}"
     end
   end
 end

@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name          = 'logstash-domo'
-  s.version       = '1.0.0-alpha.1'
+  s.version       = '1.0.0'
   s.licenses      = ['Apache-2.0']
   s.summary       = 'Manage redis queues that power the logstash-output-domo gem.'
   s.homepage      = 'https://github.com/ResignationMedia/logstash-domo'
